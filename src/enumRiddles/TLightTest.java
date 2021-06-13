@@ -18,6 +18,7 @@ enum TLight {
 	   }
 
 	   TLight next(){
+		   // Prev index, 0 -> last
 		   int nextDayIndex = this.ordinal() == 0 ? values().length - 1 : this.ordinal() - 1;
 		   return values()[nextDayIndex];
 	   }

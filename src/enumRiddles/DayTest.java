@@ -10,13 +10,14 @@ enum Day {
     SUNDAY;
 
     public Day next() {
+        // Next index, last -> 0
         int nextDayIndex = this.ordinal() + 1 == values().length ? 0 : this.ordinal() + 1;
         return values()[nextDayIndex];
     }
 
     int getDayNumber() {
         return ordinal() + 1;
-    }
+    } // Index + 1
 }
 
 public class DayTest {

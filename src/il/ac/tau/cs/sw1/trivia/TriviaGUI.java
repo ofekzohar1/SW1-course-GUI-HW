@@ -19,39 +19,40 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.*;
 
 public class TriviaGUI {
-
+    // Constants
+    private static final int TOT_QUESTION_ANSWERS_LENGTH = 5; // 1 question + 4 answers
+    private static final int CORRECT_ANSWER_INDEX = 1;
+    private static final int QUESTION_INDEX = 0;
+    private static final int HELPER_SCORE_COST = -1;
     private static final int MAX_ERRORS = 3;
+    private static final String SEP = "\t";
+
+    // GUI attributes
     private Shell shell;
     private Label scoreLabel;
     private Composite questionPanel;
     private Label startupMessageLabel;
     private Font boldFont;
-    private LastAnswer lastAnswer;
+    Label instructionLabel;
+    Label questionLabel;
+    private List<Button> answerButtons = new LinkedList<>();
+    private Button passButton;
+    private Button fiftyFiftyButton;
 
     // Game attributes
     private Set<Helper> isFirstHelper;
     private int score;
     private int numberOfMistakes;
     private List<String[]> questionsAndAnswers;
+    private LastAnswer lastAnswer;
     private String correctAnswer;
     private int currQuestionIndex;
     private int numOfPassedQuestions;
     private boolean fiftyInAction;
-    private boolean isGameEnded;
-    private static final String SEP = "\t";
+    private final AnswerBtnSelect btnSelect = new AnswerBtnSelect();
+    private SelectionAdapter passSelect;
+    private SelectionAdapter fiftySelect;
     private final Random rand = new Random();
-    private static final int TOT_QUESTION_ANSWERS_LENGTH = 5; // 1 question + 4 answers
-    private static final int CORRECT_ANSWER_INDEX = 1;
-    private static final int QUESTION_INDEX = 0;
-    private static final int HELPER_SCORE_COST = -1;
-
-
-    // Currently visible UI elements.
-    Label instructionLabel;
-    Label questionLabel;
-    private List<Button> answerButtons = new LinkedList<>();
-    private Button passButton;
-    private Button fiftyFiftyButton;
 
     public void open() {
         createShell();
@@ -68,8 +69,7 @@ public class TriviaGUI {
 
         // window style
         Rectangle monitor_bounds = shell.getMonitor().getBounds();
-        shell.setSize(new Point(monitor_bounds.width / 3,
-                monitor_bounds.height / 4));
+        shell.setSize(new Point(monitor_bounds.width / 3, monitor_bounds.height / 4));
         shell.setLayout(new GridLayout());
 
         FontData fontData = new FontData();
@@ -160,8 +160,6 @@ public class TriviaGUI {
      * Serves to display the question and answer buttons
      */
     private void updateQuestionPanel(String question, List<String> answers) {
-        // Save current list of answers.
-        List<String> currentAnswers = answers;
 
         // clear the question panel
         Control[] children = questionPanel.getChildren();
@@ -188,23 +186,7 @@ public class TriviaGUI {
             GridData answerLayoutData = GUIUtils.createFillGridData(1);
             answerLayoutData.verticalAlignment = SWT.FILL;
             answerButton.setLayoutData(answerLayoutData);
-            answerButton.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(SelectionEvent selectionEvent) {
-                    if (isGameEnded)
-                        return;
-                    Button btnSource = (Button) selectionEvent.getSource(); // Button pressed
-                    if (btnSource.getText().equals(correctAnswer)) {
-                        lastAnswer = LastAnswer.CORRECT;
-                        numberOfMistakes = 0; // Start from 0 again
-                    } else {
-                        lastAnswer = LastAnswer.WRONG;
-                        numberOfMistakes++;
-                    }
-                    score += lastAnswer.getScore(); // Update score according to the answer
-                    newQuestionDisplay();
-                }
-            });
+            answerButton.addSelectionListener(btnSelect);
             answerButtons.add(answerButton);
         }
 
@@ -214,17 +196,16 @@ public class TriviaGUI {
         GridData data = new GridData(GridData.END, GridData.CENTER, true, false);
         data.horizontalSpan = 1;
         passButton.setLayoutData(data);
-        passButton.addSelectionListener(new SelectionAdapter() {
+        passSelect = new SelectionAdapter() {
             @Override
             public void widgetSelected(SelectionEvent selectionEvent) {
-                if (isGameEnded)
-                    return;
                 if (helpers(Helper.PASS)) {
                     numOfPassedQuestions++;
                     newQuestionDisplay();
                 }
             }
-        });
+        };
+        passButton.addSelectionListener(passSelect);
 
         // create the "50-50" button to show fewer answer options
         fiftyFiftyButton = new Button(questionPanel, SWT.PUSH);
@@ -232,11 +213,9 @@ public class TriviaGUI {
         data = new GridData(GridData.BEGINNING, GridData.CENTER, true, false);
         data.horizontalSpan = 1;
         fiftyFiftyButton.setLayoutData(data);
-        fiftyFiftyButton.addSelectionListener(new SelectionAdapter() {
+        fiftySelect = new SelectionAdapter() {
             @Override
             public void widgetSelected(SelectionEvent selectionEvent) {
-                if (isGameEnded)
-                    return;
                 if (!fiftyInAction && helpers(Helper.FIFTY_FIFTY)) {
                     int counter = 0, randIndex;
                     while (counter < 2) {
@@ -250,7 +229,8 @@ public class TriviaGUI {
                     scoreLabel.setText(String.valueOf(score));
                 }
             }
-        });
+        };
+        fiftyFiftyButton.addSelectionListener(fiftySelect);
 
         // two operations to make the new widgets display properly
         questionPanel.pack();
@@ -278,32 +258,30 @@ public class TriviaGUI {
         numOfPassedQuestions = 0;
         isFirstHelper = EnumSet.allOf(Helper.class);
         lastAnswer = LastAnswer.EMPTY;
-        isGameEnded = false;
-        //rand.setSeed(0);
 
         // Read questions and answers
         BufferedReader bfRead = new BufferedReader(new FileReader(path));
         questionsAndAnswers = bfRead.lines().map(line -> line.split(SEP)).collect(Collectors.toList());
         bfRead.close();
         if (questionsAndAnswers.stream().anyMatch(x -> x.length != TOT_QUESTION_ANSWERS_LENGTH)) {
-            throw new IOException();
+            throw new IOException(); // File not in correct format
         }
-        Collections.shuffle(questionsAndAnswers, rand);
-        currQuestionIndex = -1;
+        Collections.shuffle(questionsAndAnswers, rand); // Random questions order
+        currQuestionIndex = -1; // Starting index
     }
 
     private void newQuestionDisplay() {
         scoreLabel.setText(String.valueOf(score));
+        currQuestionIndex++;
         if (endGame()) {
             return;
         }
         // New question display
-        currQuestionIndex++;
         String[] questionAnswersArray = questionsAndAnswers.get(currQuestionIndex);
         correctAnswer = questionAnswersArray[CORRECT_ANSWER_INDEX];
         String question = questionAnswersArray[QUESTION_INDEX];
         List<String> answers = Arrays.stream(questionAnswersArray).skip(QUESTION_INDEX + 1).collect(Collectors.toList());
-        Collections.shuffle(answers);
+        Collections.shuffle(answers); // Random answers display
         fiftyInAction = false;
         updateQuestionPanel(question, answers);
     }
@@ -312,9 +290,12 @@ public class TriviaGUI {
         if (currQuestionIndex >= questionsAndAnswers.size() || numberOfMistakes >= MAX_ERRORS) {
             String text = String.format("Your final score is %d after %d questions.", score, currQuestionIndex - numOfPassedQuestions);
             GUIUtils.showInfoDialog(shell, "GAME OVER", text);
-            isGameEnded = true;
+            answerButtons.forEach(x -> x.removeSelectionListener(btnSelect));
+            passButton.removeSelectionListener(passSelect);
+            fiftyFiftyButton.removeSelectionListener(fiftySelect);
+            return true;
         }
-        return isGameEnded;
+        return false;
     }
 
     private boolean helpers(Helper helper) {
@@ -328,6 +309,22 @@ public class TriviaGUI {
                 isUseHelper = false;
         }
         return isUseHelper;
+    }
+
+    private class AnswerBtnSelect extends SelectionAdapter {
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent) {
+            Button btnSource = (Button) selectionEvent.getSource(); // Button pressed
+            if (btnSource.getText().equals(correctAnswer)) {
+                lastAnswer = LastAnswer.CORRECT;
+                numberOfMistakes = 0; // Start from 0 again
+            } else {
+                lastAnswer = LastAnswer.WRONG;
+                numberOfMistakes++;
+            }
+            score += lastAnswer.getScore(); // Update score according to the answer
+            newQuestionDisplay();
+        }
     }
 }
 
