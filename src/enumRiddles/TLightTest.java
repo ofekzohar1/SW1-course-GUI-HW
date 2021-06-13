@@ -15,7 +15,12 @@ enum TLight {
 	 
 	   int getSeconds() {             // Getter
 	      return seconds;
-	   }  
+	   }
+
+	   TLight next(){
+		   int nextDayIndex = this.ordinal() == 0 ? values().length - 1 : this.ordinal() - 1;
+		   return values()[nextDayIndex];
+	   }
 	}
 	   
 	public class TLightTest {

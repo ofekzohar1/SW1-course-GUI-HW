@@ -1,5 +1,6 @@
 package riddles;
 
+import java.util.Objects;
 
 public class A implements Comparable<A> {
 	
@@ -13,25 +14,23 @@ public class A implements Comparable<A> {
 
 	@Override
 	public int hashCode() {
-		//Put your code here
-		return 0;
+		return Objects.hash(j);
 	}
 
 	@Override
 	public boolean equals(Object obj) {
-		//Put your code here
-		return true;
+		if (this == obj) return true;
+		if (obj == null || !(obj instanceof A)) return false;
+		A a = (A) obj;
+		return j == a.j;
 	}
 
 	@Override
 	public int compareTo(A o) {
-		//Put your code here
-		return 0;
+		return Integer.compare(this.j, o.j);
 	}
 	
-	
+
 	public String toString() {return "("+this.i+" "+this.j+")";}
-
-
 
 }

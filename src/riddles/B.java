@@ -1,5 +1,7 @@
 package riddles;
 
+import java.util.Objects;
+
 public class B extends A{
 	
 	protected int i;
@@ -14,15 +16,13 @@ public class B extends A{
 
 	@Override
 	public int hashCode() {
-		//Put your code here
-		return 0;
+		return Objects.hash(super.i, super.j);
 	}
 
 
 	@Override
 	public boolean equals(Object obj) {
-		//Put your code here
-		return true;
+		return super.equals(obj);
 	}
 
 }
