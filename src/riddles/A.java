@@ -20,7 +20,7 @@ public class A implements Comparable<A> {
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj) return true;
-		if (obj == null || !(obj instanceof A)) return false;
+		if (!(obj instanceof A)) return false;
 		A a = (A) obj;
 		return j == a.j;
 	}
