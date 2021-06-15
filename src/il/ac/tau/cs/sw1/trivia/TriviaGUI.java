@@ -43,7 +43,7 @@ public class TriviaGUI {
     private Set<Helper> isFirstHelper;
     private int score;
     private int numberOfMistakes;
-    private List<String[]> questionsAndAnswers;
+    private List<List<String>> questionsAndAnswers;
     private LastAnswer lastAnswer;
     private String correctAnswer;
     private int currQuestionIndex;
@@ -261,11 +261,15 @@ public class TriviaGUI {
 
         // Read questions and answers
         BufferedReader bfRead = new BufferedReader(new FileReader(path));
-        questionsAndAnswers = bfRead.lines().map(line -> line.split(SEP)).collect(Collectors.toList());
+        questionsAndAnswers = bfRead.lines().map(line -> Arrays.asList(line.split(SEP))).collect(Collectors.toList());
         bfRead.close();
-        if (questionsAndAnswers.stream().anyMatch(x -> x.length != TOT_QUESTION_ANSWERS_LENGTH)) {
+        if (questionsAndAnswers.stream().anyMatch(x -> x.size() != TOT_QUESTION_ANSWERS_LENGTH)) {
             throw new IOException(); // File not in correct format
         }
+        // Remove duplicates
+        questionsAndAnswers.forEach(x -> Collections.sort(x.subList(2, x.size())));
+        questionsAndAnswers = questionsAndAnswers.stream().distinct().collect(Collectors.toList());
+
         Collections.shuffle(questionsAndAnswers, rand); // Random questions order
         currQuestionIndex = -1; // Starting index
     }
@@ -277,10 +281,10 @@ public class TriviaGUI {
             return;
         }
         // New question display
-        String[] questionAnswersArray = questionsAndAnswers.get(currQuestionIndex);
-        correctAnswer = questionAnswersArray[CORRECT_ANSWER_INDEX];
-        String question = questionAnswersArray[QUESTION_INDEX];
-        List<String> answers = Arrays.stream(questionAnswersArray).skip(QUESTION_INDEX + 1).collect(Collectors.toList());
+        List<String> questionAnswersArray = questionsAndAnswers.get(currQuestionIndex);
+        correctAnswer = questionAnswersArray.get(CORRECT_ANSWER_INDEX);
+        String question = questionAnswersArray.get(QUESTION_INDEX);
+        List<String> answers = new ArrayList<>(questionAnswersArray.subList(QUESTION_INDEX + 1, questionAnswersArray.size()));
         Collections.shuffle(answers); // Random answers display
         fiftyInAction = false;
         updateQuestionPanel(question, answers);
